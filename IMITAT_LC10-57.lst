@@ -1,0 +1,661 @@
+
+ASEM-51 V1.3                                         Copyright (c) 2002 by W.W. Heinz                                         PAGE 1
+
+
+
+
+
+       MCS-51 Family Macro Assembler   A S E M - 5 1   V 1.3
+       =====================================================
+
+
+
+	Source File:	IMITAT_LC10-57.asm
+	Object File:	IMITAT_LC10-57.hex
+	List File:	IMITAT_LC10-57.lst
+
+
+
+ Line  I  Addr  Code            Source
+
+    1:				;формирователь сигналов L-C, ударное возбуждение двуполярными импульсами.
+    2:				;13.01.2019 8:50
+    3:				;     Terminal
+    4:
+    5:				;  PCA module 1
+    6:				;     Compare Mode:  high-speed output
+    7:				;		imit_LC08.a51 - текущий
+    8:				;2. из файла описания - формирование дельты через выход CEX1
+    9:				; интервал = 1000 мкс
+   10:				;==================================================
+   11:				$NOMOD51
+   12:				$INCLUDE (83C51F.MCU)	;
+   13: 1			;   83C51F processor definition file
+   14: 1			;   ================================
+   15: 1
+   16: 1	N	 80	P0	DATA	080H
+   17: 1	N	 81	SP	DATA	081H
+   18: 1	N	 82	DPL	DATA	082H
+   19: 1	N	 83	DPH	DATA	083H
+   20: 1	N	 87	PCON	DATA	087H
+   21: 1	N	 88	TCON	DATA	088H
+   22: 1	N	 89	TMOD	DATA	089H
+   23: 1	N	 8A	TL0	DATA	08AH
+   24: 1	N	 8B	TL1	DATA	08BH
+   25: 1	N	 8C	TH0	DATA	08CH
+   26: 1	N	 8D	TH1	DATA	08DH
+   27: 1	N	 90	P1	DATA	090H
+   28: 1	N	 98	SCON	DATA	098H
+   29: 1	N	 99	SBUF	DATA	099H
+   30: 1	N	 A0	P2	DATA	0A0H
+   31: 1	N	 A8	IE	DATA	0A8H
+   32: 1	N	 A9	SADDR	DATA	0A9H
+   33: 1	N	 B0	P3	DATA	0B0H
+   34: 1	N	 B8	IP	DATA	0B8H
+   35: 1	N	 B9	SADEN	DATA	0B9H
+   36: 1	N	 C8	T2CON	DATA	0C8H
+   37: 1	N	 C9	T2MOD	DATA	0C9H
+   38: 1	N	 CA	RCAP2L	DATA	0CAH
+   39: 1	N	 CB	RCAP2H	DATA	0CBH
+   40: 1	N	 CC	TL2	DATA	0CCH
+   41: 1	N	 CD	TH2	DATA	0CDH
+   42: 1	N	 D0	PSW	DATA	0D0H
+   43: 1	N	 E0	ACC	DATA	0E0H
+
+ASEM-51 V1.3                                         Copyright (c) 2002 by W.W. Heinz                                         PAGE 2
+
+
+
+ Line  I  Addr  Code            Source
+
+   44: 1	N	 F0	B	DATA	0F0H
+   45: 1	N	 D8	CCON	DATA	0D8H
+   46: 1	N	 D9	CMOD	DATA	0D9H
+   47: 1	N	 F9	CH	DATA	0F9H
+   48: 1	N	 E9	CL	DATA	0E9H
+   49: 1	N	 FA	CCAP0H	DATA	0FAH
+   50: 1	N	 EA	CCAP0L	DATA	0EAH
+   51: 1	N	 FB	CCAP1H	DATA	0FBH
+   52: 1	N	 EB	CCAP1L	DATA	0EBH
+   53: 1	N	 FC	CCAP2H	DATA	0FCH
+   54: 1	N	 EC	CCAP2L	DATA	0ECH
+   55: 1	N	 FD	CCAP3H	DATA	0FDH
+   56: 1	N	 ED	CCAP3L	DATA	0EDH
+   57: 1	N	 FE	CCAP4H	DATA	0FEH
+   58: 1	N	 EE	CCAP4L	DATA	0EEH
+   59: 1	N	 DA	CCAPM0	DATA	0DAH
+   60: 1	N	 DB	CCAPM1	DATA	0DBH
+   61: 1	N	 DC	CCAPM2	DATA	0DCH
+   62: 1	N	 DD	CCAPM3	DATA	0DDH
+   63: 1	N	 DE	CCAPM4	DATA	0DEH
+   64: 1
+   65: 1	N	 88	IT0	BIT	088H
+   66: 1	N	 89	IE0	BIT	089H
+   67: 1	N	 8A	IT1	BIT	08AH
+   68: 1	N	 8B	IE1	BIT	08BH
+   69: 1	N	 8C	TR0	BIT	08CH
+   70: 1	N	 8D	TF0	BIT	08DH
+   71: 1	N	 8E	TR1	BIT	08EH
+   72: 1	N	 8F	TF1	BIT	08FH
+   73: 1	N	 90	T2	BIT	090H
+   74: 1	N	 91	T2EX	BIT	091H
+   75: 1	N	 98	RI	BIT	098H
+   76: 1	N	 99	TI	BIT	099H
+   77: 1	N	 9A	RB8	BIT	09AH
+   78: 1	N	 9B	TB8	BIT	09BH
+   79: 1	N	 9C	REN	BIT	09CH
+   80: 1	N	 9D	SM2	BIT	09DH
+   81: 1	N	 9E	SM1	BIT	09EH
+   82: 1	N	 9F	SM0	BIT	09FH
+   83: 1	N	 A8	EX0	BIT	0A8H
+   84: 1	N	 A9	ET0	BIT	0A9H
+   85: 1	N	 AA	EX1	BIT	0AAH
+   86: 1	N	 AB	ET1	BIT	0ABH
+   87: 1	N	 AC	ES	BIT	0ACH
+   88: 1	N	 AD	ET2	BIT	0ADH
+   89: 1	N	 AE	EC	BIT	0AEH
+   90: 1	N	 AF	EA	BIT	0AFH
+   91: 1	N	 B0	RXD	BIT	0B0H
+   92: 1	N	 B1	TXD	BIT	0B1H
+   93: 1	N	 B2	INT0	BIT	0B2H
+   94: 1	N	 B3	INT1	BIT	0B3H
+   95: 1	N	 B4	T0	BIT	0B4H
+   96: 1	N	 B5	T1	BIT	0B5H
+   97: 1	N	 B6	WR	BIT	0B6H
+   98: 1	N	 B7	RD	BIT	0B7H
+   99: 1	N	 B8	PX0	BIT	0B8H
+
+ASEM-51 V1.3                                         Copyright (c) 2002 by W.W. Heinz                                         PAGE 3
+
+
+
+ Line  I  Addr  Code            Source
+
+  100: 1	N	 B9	PT0	BIT	0B9H
+  101: 1	N	 BA	PX1	BIT	0BAH
+  102: 1	N	 BB	PT1	BIT	0BBH
+  103: 1	N	 BC	PS	BIT	0BCH
+  104: 1	N	 BD	PT2	BIT	0BDH
+  105: 1	N	 BE	PPC	BIT	0BEH
+  106: 1	N	 C8	CPRL2	BIT	0C8H
+  107: 1	N	 C9	CT2	BIT	0C9H
+  108: 1	N	 CA	TR2	BIT	0CAH
+  109: 1	N	 CB	EXEN2	BIT	0CBH
+  110: 1	N	 CC	TCLK	BIT	0CCH
+  111: 1	N	 CD	RCLK	BIT	0CDH
+  112: 1	N	 CE	EXF2	BIT	0CEH
+  113: 1	N	 CF	TF2	BIT	0CFH
+  114: 1	N	 D0	P	BIT	0D0H
+  115: 1	N	 D2	OV	BIT	0D2H
+  116: 1	N	 D3	RS0	BIT	0D3H
+  117: 1	N	 D4	RS1	BIT	0D4H
+  118: 1	N	 D5	F0	BIT	0D5H
+  119: 1	N	 D6	AC	BIT	0D6H
+  120: 1	N	 D7	CY	BIT	0D7H
+  121: 1	N	 D8	CCF0	BIT	0D8H
+  122: 1	N	 D9	CCF1	BIT	0D9H
+  123: 1	N	 DA	CCF2	BIT	0DAH
+  124: 1	N	 DB	CCF3	BIT	0DBH
+  125: 1	N	 DC	CCF4	BIT	0DCH
+  126: 1	N	 DE	CR	BIT	0DEH
+  127: 1	N	 DF	CF	BIT	0DFH
+  128: 1
+  129: 1	N      0000	RESET	CODE	000H
+  130: 1	N      0003	EXTI0	CODE	003H
+  131: 1	N      000B	TIMER0	CODE	00BH
+  132: 1	N      0013	EXTI1	CODE	013H
+  133: 1	N      001B	TIMER1	CODE	01BH
+  134: 1	N      0023	SINT	CODE	023H
+  135: 1	N      002B	TIMER2	CODE	02BH
+  136: 1	N      0033	PCA	CODE	033H
+  137:				; использован модуль 1
+  138:				;=================================================
+  139:
+  140:		N      E000	cs	equ	0e000h	;
+  141:		N      C000	xfer	equ	0c000h	;
+  142:		N      A000	CS2	EQU	0a000h	;
+  143:		N      8000	XFER2	EQU	8000h	;
+  144:				;==== параметры формируемого паттерна и сигнала =====================
+  145:				;    коды дельта-импульсов
+  146:		N      0000	plus	equ	0
+  147:		N      0001	minus	equ	1
+  148:		N      0003	null	equ	3
+  149:				;    использованы в таблице временного паттерна
+  150:
+  151:		N      000A	A1	equ	10	;ВЩ
+  152:		N      00FA	A2	equ	250	;ВЩ-9-й
+  153:
+  154:				; длительность ППОП - 60 мкс
+  155:		N      03E8	TT0	equ	1000
+
+ASEM-51 V1.3                                         Copyright (c) 2002 by W.W. Heinz                                         PAGE 4
+
+
+
+ Line  I  Addr  Code            Source
+
+  156:		N      003C	TT1	equ	60
+  157:		N      2AF8	TZ12	equ	11000
+  158:				; амплитура первого импульса постоянна A1, а второго, задерженного на TT1 - увели-
+  159:				; чивается от A1 до 8*A1, амплитуда 9-го задерженного импульса - A2.
+  160:				; =====================================================================
+  161:		N      0000		org 0
+  162:	  0000	02 00 36		jmp	init
+  163:		N      0033		org	33h
+  164:	  0033	02 00 7C		jmp	subr_PCA
+  165:
+  166:	  0036			INIT:
+  167:
+  168:	  0036	12 00 D9		call	init_pca_tmr
+  169:					;
+  170:	  0039	75 90 FF		mov	p1,#0FFh
+  171:	  003C	75 A0 00		mov	p2,#0	; для управления DAC
+  172:					;	clr	p1.4
+  173:	  003F	C2 B4			clr	p3.4
+  174:	  0041	D2 B5			setb	p3.5
+  175:					;
+  176:
+  177:	  0043	12 00 F2		call	init_pca_module1
+  178:					;
+  179:					; загрузка 1-го интервала из таблицы
+  180:	  0046	90 00 FF		mov	dptr,#pattern
+  181:					; формирователь всегда 0 пропуск одного
+  182:	  0049	7D 00			mov	r5,#0	; чтение амплитуды
+  183:	  004B	ED			mov	a,r5
+  184:	  004C	93			movc	a,@a+dptr
+  185:	  004D	75 A0 E0		mov	p2,#(high cs)
+  186:	  0050	F2			movx	@R0,a	; запись MSB
+  187:	  0051	74 00			mov	a,#0	; LSB всегда нуль
+  188:	  0053	75 A0 C0		mov	p2,#(high xfer)
+  189:	  0056	F2			movx	@r0,a	; запись LSB
+  190:	  0057	0D			inc	r5
+  191:	  0058	ED			mov	a,r5
+  192:	  0059	93			movc	a,@a+dptr	; чтение фазы
+  193:	  005A	60 05			jz	P_plus
+  194:					; minus
+  195:	  005C	D2 B4			setb	p3.4
+  196:	  005E	02 00 63		jmp	next0
+  197:	  0061			P_plus:
+  198:	  0061	C2 B4			clr	p3.4
+  199:	  0063			next0:
+  200:	  0063	0D			inc	r5
+  201:	  0064	0D			inc	r5	;смещение на LSB
+  202:	  0065	ED			mov	a,r5
+  203:	  0066	C2 D5			clr	f0
+  204:	  0068	93			movc	a,@a+dptr
+  205:	  0069	F5 EB			mov	ccap1l,A
+  206:	  006B	1D			dec	R5	;смещение на LSB
+  207:	  006C	ED			MOV	A,R5
+  208:	  006D	93			MOVC	A,@A+DPTR
+  209:	  006E	F5 FB			mov	CCAP1H,A
+  210:	  0070	0D			inc	r5
+  211:	  0071	0D			inc	r5	;смещение на амплитуду
+
+ASEM-51 V1.3                                         Copyright (c) 2002 by W.W. Heinz                                         PAGE 5
+
+
+
+ Line  I  Addr  Code            Source
+
+  212:					;
+  213:
+  214:	  0072	12 00 F6		call	init_special_interrupts
+  215:					;
+  216:	  0075			work:
+  217:	  0075	20 D5 02		jb	f0,next00
+  218:	  0078	80 FB			jmp	work
+  219:	  007A			next00:
+  220:	  007A	80 FE			jmp	$
+  221:				;============= ППОП =========================
+  222:	  007C			subr_PCA:
+  223:	  007C	C2 B5			clr	p3.5
+  224:
+  225:	  007E	ED			mov	a,r5
+  226:	  007F	93			movc	a,@a+dptr
+  227:	  0080	B4 FF 03		cjne	a,#Konec,subr1
+  228:	  0083	02 00 D0		jmp	povtor
+  229:	  0086			subr1:
+  230:
+  231:	  0086	0D			inc	r5
+  232:	  0087	ED			mov	a,r5
+  233:	  0088	93			movc	a,@a+dptr	; чтение фазы
+  234:	  0089	1D			dec	r5	;возврат на аплитуду
+  235:	  008A	60 17			jz	P1_plus
+  236:					; minus
+  237:	  008C	ED			mov	a,r5
+  238:	  008D	93			movc	a,@a+dptr
+  239:	  008E	75 A0 A0		mov	p2,#(high cs2)
+  240:	  0091	F2			movx	@R0,a	; запись MSB
+  241:	  0092	74 00			mov	a,#0	; LSB всегда нуль
+  242:	  0094	75 A0 80		mov	p2,#(high xfer2)
+  243:	  0097	F2			movx	@r0,a	; запись LSB
+  244:					; plus = 0
+  245:	  0098	75 A0 E0		mov	p2,#(high cs)
+  246:	  009B	F2			movx	@r0,a	; запись LSB
+  247:	  009C	75 A0 C0		mov	p2,#(high xfer)
+  248:	  009F	F2			movx	@r0,a	; запись LSB
+  249:	  00A0	02 00 B7			jmp	next10
+  250:	  00A3			P1_plus:
+  251:	  00A3	ED			mov	a,r5
+  252:	  00A4	93			movc	a,@a+dptr
+  253:	  00A5	75 A0 E0		mov	p2,#(high cs)
+  254:	  00A8	F2			movx	@R0,a	; запись MSB
+  255:	  00A9	74 00			mov	a,#0	; LSB всегда нуль
+  256:	  00AB	75 A0 C0		mov	p2,#(high xfer)
+  257:	  00AE	F2			movx	@r0,a	; запись LSB
+  258:					; minus = 0
+  259:	  00AF	75 A0 A0		mov	p2,#(high cs2)
+  260:	  00B2	F2			movx	@R0,a	; запись MSB
+  261:	  00B3	75 A0 80		mov	p2,#(high xfer2)
+  262:	  00B6	F2			movx	@r0,a	; запись LSB
+  263:	  00B7			next10:
+  264:	  00B7	0D			inc	r5
+  265:	  00B8	0D			inc	r5
+  266:	  00B9	0D			inc	r5	;смещение на LSB
+  267:	  00BA	ED			mov	a,r5
+
+ASEM-51 V1.3                                         Copyright (c) 2002 by W.W. Heinz                                         PAGE 6
+
+
+
+ Line  I  Addr  Code            Source
+
+  268:	  00BB	C2 D5			clr	f0
+  269:	  00BD	93			movc	a,@a+dptr
+  270:	  00BE	25 EB			add	a,ccap1L	;вычисление след интервала LSB
+  271:	  00C0	F5 EB			mov	ccap1l,A
+  272:	  00C2	1D			dec	R5	;смещение на LSB
+  273:	  00C3	ED			MOV	A,R5
+  274:	  00C4	93			MOVC	A,@A+DPTR
+  275:	  00C5	35 FB			addc	a,ccap1h	;вычисление след интервала MCB
+  276:	  00C7	F5 FB			mov	CCAP1H,A
+  277:	  00C9	0D			inc	r5
+  278:	  00CA	0D			inc	r5	;смещение на амплитуду
+  279:
+  280:	  00CB	C2 D9			clr	ccf1
+  281:	  00CD	D2 B5			setb	p3.5
+  282:	  00CF	32			reti
+  283:	  00D0			povtor:
+  284:	  00D0	90 01 03		mov	dptr,#patt0
+  285:	  00D3	7D 00			mov	r5,#0
+  286:	  00D5	ED			MOV	A,R5
+  287:	  00D6	93			movc	a,@a+dptr
+  288:
+  289:	  00D7	80 AD			jmp	subr1
+  290:
+  291:				; ---- инициализация ----
+  292:				; PCA Timer/Counter
+  293:				;    Clocking Source:  Fosc/12
+  294:				;    Run Control:  PCA Timer is Disabled
+  295:				;    Timer Count: 000H
+  296:				;    PCA global interrupt:  enabled
+  297:				;         NOTE:  The global disable bit is clear;
+  298:				;                all interrupts are disabled.
+  299:
+  300:	  00D9			init_pca_tmr:
+  301:
+  302:	  00D9	C2 DE		   clr CR                        ; Turn off PCA timer to load count
+  303:	  00DB	75 E9 00	   mov CL, #00H                 ; Set PCA count (low byte)
+  304:	  00DE	75 F9 00	   mov CH, #00H                 ; Set PCA count (high byte)
+  305:
+  306:	  00E1	D2 AE		   setb EC                       ; Enable PCA global interrupt
+  307:	  00E3	53 D9 FE	   anl CMOD, #0FEH               ; Disable PCA overflow interrupt
+  308:	  00E6	53 D9 F9	   anl CMOD, #0F9H               ; Set clocking input source
+  309:	  00E9	43 D9 00	   orl CMOD, #00H
+  310:	  00EC	53 D9 7F	   anl CMOD, #7FH                ; Clr counter idle control
+  311:
+  312:	  00EF	D2 DE		   setb CR                       ; Enable PCA Timer/Counter
+  313:	  00F1	22		   ret
+  314:
+  315:				;  PCA module 1
+  316:				;     Compare Mode:  high-speed output
+  317:				;     Interrupts:  PCA compare is enabled
+  318:				;           NOTE:  The PCA global interrupt is disabled
+  319:
+  320:	  00F2			init_pca_module1:
+  321:	  00F2	75 DB 4D	   mov CCAPM1, #04DH
+  322:				   ;mov CCAP1L, #0E8H	; исключить, читается из таблицы pattern
+  323:				   ;mov CCAP1H, #03H	;
+
+ASEM-51 V1.3                                         Copyright (c) 2002 by W.W. Heinz                                         PAGE 7
+
+
+
+ Line  I  Addr  Code            Source
+
+  324:	  00F5	22		   ret
+  325:
+  326:				; Interrupt Control Unit
+  327:				;   ****  Enabled interrupts in Interrupt Enable Register ****
+  328:				;    ****  GLOBAL INTERRUPT MUST BE ENABLED FOR ANY OTHER
+  329:				;    ****  INTERRUPT TO WORK!
+  330:				;                  GLOBAL INTERRUPT DISABLED ALL INTERRUPTS
+  331:				;                              ARE DISABLED
+  332:
+  333:
+  334:				;                  PCA interrupt
+  335:				;                        Priority Level = 3
+  336:
+  337:
+  338:	  00F6			init_special_interrupts:
+  339:
+  340:	  00F6	75 A8 C0	      mov   IE, #0C0h
+  341:	  00F9	75 B8 40	      mov   IP, #040h
+  342:				      ;mov   IPH, #040h
+  343:
+  344:	  00FC	22		      ret
+  345:
+  346:
+  347:	  00FD	80 FE			jmp	$
+  348:
+  349:
+  350:
+  351:		N      00FF	konec	equ	0ffh
+  352:	  00FF			pattern:
+  353:	  00FF	0A 00			db	A1,plus	; амплитуда1 и фаза не вывода дельты
+  354:	  0101	03 E8			dw	1000	; TT01 для отладки
+  355:	  0103			patt0:
+  356:	  0103	0A 00			db	A1,plus	; ампл 1 зап, фаза 1,
+  357:	  0105	00 3C			dW	TT1	; T12
+  358:	  0107	0A 00			db	A1,plus	; амплитуда2, фаза 1,
+  359:	  0109	03 AC			dW	TT0-TT1	; T12
+  360:
+  361:	  010B	14 00			db	2*A1,Plus	; ампл 2 зап фаза 2
+  362:	  010D	00 3C			dW	TT1	; T23
+  363:	  010F	0A 01			db	A1,minus	; фаза 2
+  364:	  0111	03 AC			dW	TT0-TT1	; T23
+  365:
+  366:	  0113	1E 01			db	3*A1,minus	; ампл 3 зап фаза 3
+  367:	  0115	00 3C			dw	TT1	; T34
+  368:	  0117	0A 01			db	A1,minus	; фаза 3
+  369:	  0119	03 AC			dw	TT0-TT1	; T34
+  370:
+  371:	  011B	28 01			db	4*A1,minus	; ампл 4 зап, фаза 4
+  372:	  011D	00 3C			dw	TT1	; T45
+  373:	  011F	0A 00			db	A1,plus	; фаза 4
+  374:	  0121	03 AC			dw	TT0-TT1	; T45
+  375:
+  376:	  0123	32 00			db	5*A1,plus	; ампл 5 зап. фаза 5
+  377:	  0125	00 3C			dw	TT1	; T56
+  378:	  0127	0A 01			db	A1,minus	; .фаза 5
+  379:	  0129	03 AC			dw	TT0-TT1	; T56
+
+ASEM-51 V1.3                                         Copyright (c) 2002 by W.W. Heinz                                         PAGE 8
+
+
+
+ Line  I  Addr  Code            Source
+
+  380:
+  381:	  012B	3C 01			db	6*A1,Minus	; ампл. 6 зап, фаза 6
+  382:	  012D	00 3C			dw	TT1	; T56
+  383:	  012F	0A 00			db	A1,plus	;  фаза 6
+  384:	  0131	03 AC			dw	TT0-TT1	; T67
+  385:
+  386:	  0133	46 00			db	7*A1,plus	; ампл 7 зап.фаза 7
+  387:	  0135	00 3C			dw	TT1	; T78
+  388:	  0137	0A 01			db	A1,minus	;фаза 7
+  389:	  0139	03 AC			dw	TT0-TT1	; T78
+  390:
+  391:	  013B	50 01			db	8*A1,minus	;  ампл 8 зап фаза
+  392:	  013D	00 3C			dw	TT1	; T89
+  393:	  013F	0A 00			db	A1,plus	; фаза
+  394:	  0141	07 94			dw	(2*TT0)-TT1	;  T89
+  395:
+  396:	  0143	FA 00			db	A2,plus	; ампл. 9 зап,фаза 9
+  397:	  0145	00 3C			dw	TT1
+  398:	  0147	FA 00			db	A2,plus	; фаза 9
+  399:	  0149	2A BC			dw	TZ12-TT1
+  400:
+  401:	  014B	FF			db	konec
+  402:
+  403:					end
+  404:
+  405:
+
+
+
+
+
+                     register banks used:  ---
+
+                     no errors
+
+
+
+
+ASEM-51 V1.3                                         Copyright (c) 2002 by W.W. Heinz                                         PAGE 9
+
+
+
+
+
+	       L I S T   O F   S Y M B O L S
+	       =============================
+
+
+SYMBOL				  TYPE     VALUE	LINE
+------------------------------------------------------------
+??ASEM_51			  NUMBER    8051
+??VERSION			  NUMBER    0130
+A1				  NUMBER    000A	 151
+A2				  NUMBER    00FA	 152
+AC				  BIT	      D6	 119
+ACC				  DATA	      E0	  43
+B				  DATA	      F0	  44
+CCAP0H				  DATA	      FA	  49
+CCAP0L				  DATA	      EA	  50
+CCAP1H				  DATA	      FB	  51
+CCAP1L				  DATA	      EB	  52
+CCAP2H				  DATA	      FC	  53
+CCAP2L				  DATA	      EC	  54
+CCAP3H				  DATA	      FD	  55
+CCAP3L				  DATA	      ED	  56
+CCAP4H				  DATA	      FE	  57
+CCAP4L				  DATA	      EE	  58
+CCAPM0				  DATA	      DA	  59
+CCAPM1				  DATA	      DB	  60
+CCAPM2				  DATA	      DC	  61
+CCAPM3				  DATA	      DD	  62
+CCAPM4				  DATA	      DE	  63
+CCF0				  BIT	      D8	 121
+CCF1				  BIT	      D9	 122
+CCF2				  BIT	      DA	 123
+CCF3				  BIT	      DB	 124
+CCF4				  BIT	      DC	 125
+CCON				  DATA	      D8	  45
+CF				  BIT	      DF	 127
+CH				  DATA	      F9	  47
+CL				  DATA	      E9	  48
+CMOD				  DATA	      D9	  46
+CPRL2				  BIT	      C8	 106
+CR				  BIT	      DE	 126
+CS				  NUMBER    E000	 140
+CS2				  NUMBER    A000	 142
+CT2				  BIT	      C9	 107
+CY				  BIT	      D7	 120
+DPH				  DATA	      83	  19
+DPL				  DATA	      82	  18
+EA				  BIT	      AF	  90
+EC				  BIT	      AE	  89
+ES				  BIT	      AC	  87
+ET0				  BIT	      A9	  84
+ET1				  BIT	      AB	  86
+ET2				  BIT	      AD	  88
+EX0				  BIT	      A8	  83
+EX1				  BIT	      AA	  85
+EXEN2				  BIT	      CB	 109
+EXF2				  BIT	      CE	 112
+
+ASEM-51 V1.3                                        Copyright (c) 2002 by W.W. Heinz                                         PAGE 10
+
+
+
+SYMBOL				  TYPE     VALUE	LINE
+------------------------------------------------------------
+EXTI0				  CODE	    0003	 130
+EXTI1				  CODE	    0013	 132
+F0				  BIT	      D5	 118
+IE				  DATA	      A8	  31
+IE0				  BIT	      89	  66
+IE1				  BIT	      8B	  68
+INIT				  CODE	    0036	 166
+INIT_PCA_MODULE1		  CODE	    00F2	 320
+INIT_PCA_TMR			  CODE	    00D9	 300
+INIT_SPECIAL_INTERRUPTS		  CODE	    00F6	 338
+INT0				  BIT	      B2	  93
+INT1				  BIT	      B3	  94
+IP				  DATA	      B8	  34
+IT0				  BIT	      88	  65
+IT1				  BIT	      8A	  67
+KONEC				  NUMBER    00FF	 351
+MINUS				  NUMBER    0001	 147
+NEXT0				  CODE	    0063	 199
+NEXT00				  CODE	    007A	 219
+NEXT10				  CODE	    00B7	 263
+NULL				  NUMBER    0003	 148
+OV				  BIT	      D2	 115
+P				  BIT	      D0	 114
+P0				  DATA	      80	  16
+P1				  DATA	      90	  27
+P1_PLUS				  CODE	    00A3	 250
+P2				  DATA	      A0	  30
+P3				  DATA	      B0	  33
+PATT0				  CODE	    0103	 355
+PATTERN				  CODE	    00FF	 352
+PCA				  CODE	    0033	 136
+PCON				  DATA	      87	  20
+PLUS				  NUMBER    0000	 146
+POVTOR				  CODE	    00D0	 283
+PPC				  BIT	      BE	 105
+PS				  BIT	      BC	 103
+PSW				  DATA	      D0	  42
+PT0				  BIT	      B9	 100
+PT1				  BIT	      BB	 102
+PT2				  BIT	      BD	 104
+PX0				  BIT	      B8	  99
+PX1				  BIT	      BA	 101
+P_PLUS				  CODE	    0061	 197
+RB8				  BIT	      9A	  77
+RCAP2H				  DATA	      CB	  39
+RCAP2L				  DATA	      CA	  38
+RCLK				  BIT	      CD	 111
+RD				  BIT	      B7	  98
+REN				  BIT	      9C	  79
+RESET				  CODE	    0000	 129
+RI				  BIT	      98	  75
+RS0				  BIT	      D3	 116
+RS1				  BIT	      D4	 117
+RXD				  BIT	      B0	  91
+SADDR				  DATA	      A9	  32
+SADEN				  DATA	      B9	  35
+
+ASEM-51 V1.3                                        Copyright (c) 2002 by W.W. Heinz                                         PAGE 11
+
+
+
+SYMBOL				  TYPE     VALUE	LINE
+------------------------------------------------------------
+SBUF				  DATA	      99	  29
+SCON				  DATA	      98	  28
+SINT				  CODE	    0023	 134
+SM0				  BIT	      9F	  82
+SM1				  BIT	      9E	  81
+SM2				  BIT	      9D	  80
+SP				  DATA	      81	  17
+SUBR1				  CODE	    0086	 229
+SUBR_PCA			  CODE	    007C	 222
+T0				  BIT	      B4	  95
+T1				  BIT	      B5	  96
+T2				  BIT	      90	  73
+T2CON				  DATA	      C8	  36
+T2EX				  BIT	      91	  74
+T2MOD				  DATA	      C9	  37
+TB8				  BIT	      9B	  78
+TCLK				  BIT	      CC	 110
+TCON				  DATA	      88	  21
+TF0				  BIT	      8D	  70
+TF1				  BIT	      8F	  72
+TF2				  BIT	      CF	 113
+TH0				  DATA	      8C	  25
+TH1				  DATA	      8D	  26
+TH2				  DATA	      CD	  41
+TI				  BIT	      99	  76
+TIMER0				  CODE	    000B	 131
+TIMER1				  CODE	    001B	 133
+TIMER2				  CODE	    002B	 135
+TL0				  DATA	      8A	  23
+TL1				  DATA	      8B	  24
+TL2				  DATA	      CC	  40
+TMOD				  DATA	      89	  22
+TR0				  BIT	      8C	  69
+TR1				  BIT	      8E	  71
+TR2				  BIT	      CA	 108
+TT0				  NUMBER    03E8	 155
+TT1				  NUMBER    003C	 156
+TXD				  BIT	      B1	  92
+TZ12				  NUMBER    2AF8	 157
+WORK				  CODE	    0075	 216
+WR				  BIT	      B6	  97
+XFER				  NUMBER    C000	 141
+XFER2				  NUMBER    8000	 143

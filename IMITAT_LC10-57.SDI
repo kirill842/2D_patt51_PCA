@@ -1,0 +1,405 @@
+,,,;формирователь сигналов L-C, ударное возбуждение двуполярными импульсами.
+,,,;13.01.2019 8:50
+,,,;     Terminal
+,,,
+,,,;  PCA module 1
+,,,;     Compare Mode:  high-speed output
+,,,;               imit_LC08.a51 - текущий
+,,,;2. из файла описания - формирование дельты через выход CEX1
+,,,; интервал = 1000 мкс
+,,,;==================================================
+,,,$NOMOD51
+,,,$INCLUDE (83C51F.MCU)   ;
+,,,;   83C51F processor definition file
+,,,;   ================================
+,,,
+,,,P0      DATA    080H
+,,,SP      DATA    081H
+,,,DPL     DATA    082H
+,,,DPH     DATA    083H
+,,,PCON    DATA    087H
+,,,TCON    DATA    088H
+,,,TMOD    DATA    089H
+,,,TL0     DATA    08AH
+,,,TL1     DATA    08BH
+,,,TH0     DATA    08CH
+,,,TH1     DATA    08DH
+,,,P1      DATA    090H
+,,,SCON    DATA    098H
+,,,SBUF    DATA    099H
+,,,P2      DATA    0A0H
+,,,IE      DATA    0A8H
+,,,SADDR   DATA    0A9H
+,,,P3      DATA    0B0H
+,,,IP      DATA    0B8H
+,,,SADEN   DATA    0B9H
+,,,T2CON   DATA    0C8H
+,,,T2MOD   DATA    0C9H
+,,,RCAP2L  DATA    0CAH
+,,,RCAP2H  DATA    0CBH
+,,,TL2     DATA    0CCH
+,,,TH2     DATA    0CDH
+,,,PSW     DATA    0D0H
+,,,ACC     DATA    0E0H
+,,,B       DATA    0F0H
+,,,CCON    DATA    0D8H
+,,,CMOD    DATA    0D9H
+,,,CH      DATA    0F9H
+,,,CL      DATA    0E9H
+,,,CCAP0H  DATA    0FAH
+,,,CCAP0L  DATA    0EAH
+,,,CCAP1H  DATA    0FBH
+,,,CCAP1L  DATA    0EBH
+,,,CCAP2H  DATA    0FCH
+,,,CCAP2L  DATA    0ECH
+,,,CCAP3H  DATA    0FDH
+,,,CCAP3L  DATA    0EDH
+,,,CCAP4H  DATA    0FEH
+,,,CCAP4L  DATA    0EEH
+,,,CCAPM0  DATA    0DAH
+,,,CCAPM1  DATA    0DBH
+,,,CCAPM2  DATA    0DCH
+,,,CCAPM3  DATA    0DDH
+,,,CCAPM4  DATA    0DEH
+,,,
+,,,IT0     BIT     088H
+,,,IE0     BIT     089H
+,,,IT1     BIT     08AH
+,,,IE1     BIT     08BH
+,,,TR0     BIT     08CH
+,,,TF0     BIT     08DH
+,,,TR1     BIT     08EH
+,,,TF1     BIT     08FH
+,,,T2      BIT     090H
+,,,T2EX    BIT     091H
+,,,RI      BIT     098H
+,,,TI      BIT     099H
+,,,RB8     BIT     09AH
+,,,TB8     BIT     09BH
+,,,REN     BIT     09CH
+,,,SM2     BIT     09DH
+,,,SM1     BIT     09EH
+,,,SM0     BIT     09FH
+,,,EX0     BIT     0A8H
+,,,ET0     BIT     0A9H
+,,,EX1     BIT     0AAH
+,,,ET1     BIT     0ABH
+,,,ES      BIT     0ACH
+,,,ET2     BIT     0ADH
+,,,EC      BIT     0AEH
+,,,EA      BIT     0AFH
+,,,RXD     BIT     0B0H
+,,,TXD     BIT     0B1H
+,,,INT0    BIT     0B2H
+,,,INT1    BIT     0B3H
+,,,T0      BIT     0B4H
+,,,T1      BIT     0B5H
+,,,WR      BIT     0B6H
+,,,RD      BIT     0B7H
+,,,PX0     BIT     0B8H
+,,,PT0     BIT     0B9H
+,,,PX1     BIT     0BAH
+,,,PT1     BIT     0BBH
+,,,PS      BIT     0BCH
+,,,PT2     BIT     0BDH
+,,,PPC     BIT     0BEH
+,,,CPRL2   BIT     0C8H
+,,,CT2     BIT     0C9H
+,,,TR2     BIT     0CAH
+,,,EXEN2   BIT     0CBH
+,,,TCLK    BIT     0CCH
+,,,RCLK    BIT     0CDH
+,,,EXF2    BIT     0CEH
+,,,TF2     BIT     0CFH
+,,,P       BIT     0D0H
+,,,OV      BIT     0D2H
+,,,RS0     BIT     0D3H
+,,,RS1     BIT     0D4H
+,,,F0      BIT     0D5H
+,,,AC      BIT     0D6H
+,,,CY      BIT     0D7H
+,,,CCF0    BIT     0D8H
+,,,CCF1    BIT     0D9H
+,,,CCF2    BIT     0DAH
+,,,CCF3    BIT     0DBH
+,,,CCF4    BIT     0DCH
+,,,CR      BIT     0DEH
+,,,CF      BIT     0DFH
+,,,
+,,,RESET   CODE    000H
+,,,EXTI0   CODE    003H
+,,,TIMER0  CODE    00BH
+,,,EXTI1   CODE    013H
+,,,TIMER1  CODE    01BH
+,,,SINT    CODE    023H
+,,,TIMER2  CODE    02BH
+,,,PCA     CODE    033H
+,,,; использован модуль 1
+,,,;=================================================
+,,,
+,,,cs      equ     0e000h  ;
+,,,xfer    equ     0c000h  ;
+,,,CS2     EQU     0a000h  ;
+,,,XFER2   EQU     8000h   ;
+,,,;==== параметры формируемого паттерна и сигнала =====================
+,,,;    коды дельта-импульсов
+,,,plus    equ     0
+,,,minus   equ     1
+,,,null    equ     3
+,,,;    использованы в таблице временного паттерна
+,,,
+,,,A1      equ     10      ;ВЩ
+,,,A2      equ     250     ;ВЩ-9-й
+,,,
+,,,; длительность ППОП - 60 мкс
+,,,TT0     equ     1000
+,,,TT1     equ     60
+,,,TZ12    equ     11000
+,,,; амплитура первого импульса постоянна A1, а второго, задерженного на TT1 - увели-
+,,,; чивается от A1 до 8*A1, амплитуда 9-го задерженного импульса - A2.
+,,,; =====================================================================
+,,,        org 0
+0000,02 00 36,,        jmp     init
+,,,        org     33h
+0033,02 00 7C,,        jmp     subr_PCA
+,,,
+0036,,INIT,INIT:
+,,,
+0036,12 00 D9,,        call    init_pca_tmr
+,,,        ;
+0039,75 90 FF,,        mov     p1,#0FFh
+003C,75 A0 00,,        mov     p2,#0   ; для управления DAC
+,,,        ;       clr     p1.4
+003F,C2 B4,,        clr     p3.4
+0041,D2 B5,,        setb    p3.5
+,,,        ;
+,,,
+0043,12 00 F2,,        call    init_pca_module1
+,,,        ;
+,,,        ; загрузка 1-го интервала из таблицы
+0046,90 00 FF,,        mov     dptr,#pattern
+,,,        ; формирователь всегда 0 пропуск одного
+0049,7D 00,,        mov     r5,#0   ; чтение амплитуды
+004B,ED,,        mov     a,r5
+004C,93,,        movc    a,@a+dptr
+004D,75 A0 E0,,        mov     p2,#(high cs)
+0050,F2,,        movx    @R0,a   ; запись MSB
+0051,74 00,,        mov     a,#0    ; LSB всегда нуль
+0053,75 A0 C0,,        mov     p2,#(high xfer)
+0056,F2,,        movx    @r0,a   ; запись LSB
+0057,0D,,        inc     r5
+0058,ED,,        mov     a,r5
+0059,93,,        movc    a,@a+dptr       ; чтение фазы
+005A,60 05,,        jz      P_plus
+,,,        ; minus
+005C,D2 B4,,        setb    p3.4
+005E,02 00 63,,        jmp     next0
+0061,,P_plus,P_plus:
+0061,C2 B4,,        clr     p3.4
+0063,,next0,next0:
+0063,0D,,        inc     r5
+0064,0D,,        inc     r5      ;смещение на LSB
+0065,ED,,        mov     a,r5
+0066,C2 D5,,        clr     f0
+0068,93,,        movc    a,@a+dptr
+0069,F5 EB,,        mov     ccap1l,A
+006B,1D,,        dec     R5      ;смещение на LSB
+006C,ED,,        MOV     A,R5
+006D,93,,        MOVC    A,@A+DPTR
+006E,F5 FB,,        mov     CCAP1H,A
+0070,0D,,        inc     r5
+0071,0D,,        inc     r5      ;смещение на амплитуду
+,,,        ;
+,,,
+0072,12 00 F6,,        call    init_special_interrupts
+,,,        ;
+0075,,work,work:
+0075,20 D5 02,,        jb      f0,next00
+0078,80 FB,,        jmp     work
+007A,,next00,next00:
+007A,80 FE,,        jmp     $
+,,,;============= ППОП =========================
+007C,,subr_PCA,subr_PCA:
+007C,C2 B5,,        clr     p3.5
+,,,
+007E,ED,,        mov     a,r5
+007F,93,,        movc    a,@a+dptr
+0080,B4 FF 03,,        cjne    a,#Konec,subr1
+0083,02 00 D0,,        jmp     povtor
+0086,,subr1,subr1:
+,,,
+0086,0D,,        inc     r5
+0087,ED,,        mov     a,r5
+0088,93,,        movc    a,@a+dptr       ; чтение фазы
+0089,1D,,        dec     r5      ;возврат на аплитуду
+008A,60 17,,        jz      P1_plus
+,,,        ; minus
+008C,ED,,        mov     a,r5
+008D,93,,        movc    a,@a+dptr
+008E,75 A0 A0,,        mov     p2,#(high cs2)
+0091,F2,,        movx    @R0,a   ; запись MSB
+0092,74 00,,        mov     a,#0    ; LSB всегда нуль
+0094,75 A0 80,,        mov     p2,#(high xfer2)
+0097,F2,,        movx    @r0,a   ; запись LSB
+,,,        ; plus = 0
+0098,75 A0 E0,,        mov     p2,#(high cs)
+009B,F2,,        movx    @r0,a   ; запись LSB
+009C,75 A0 C0,,        mov     p2,#(high xfer)
+009F,F2,,        movx    @r0,a   ; запись LSB
+00A0,02 00 B7,,                jmp     next10
+00A3,,P1_plus,P1_plus:
+00A3,ED,,        mov     a,r5
+00A4,93,,        movc    a,@a+dptr
+00A5,75 A0 E0,,        mov     p2,#(high cs)
+00A8,F2,,        movx    @R0,a   ; запись MSB
+00A9,74 00,,        mov     a,#0    ; LSB всегда нуль
+00AB,75 A0 C0,,        mov     p2,#(high xfer)
+00AE,F2,,        movx    @r0,a   ; запись LSB
+,,,        ; minus = 0
+00AF,75 A0 A0,,        mov     p2,#(high cs2)
+00B2,F2,,        movx    @R0,a   ; запись MSB
+00B3,75 A0 80,,        mov     p2,#(high xfer2)
+00B6,F2,,        movx    @r0,a   ; запись LSB
+00B7,,next10,next10:
+00B7,0D,,        inc     r5
+00B8,0D,,        inc     r5
+00B9,0D,,        inc     r5      ;смещение на LSB
+00BA,ED,,        mov     a,r5
+00BB,C2 D5,,        clr     f0
+00BD,93,,        movc    a,@a+dptr
+00BE,25 EB,,        add     a,ccap1L        ;вычисление след интервала LSB
+00C0,F5 EB,,        mov     ccap1l,A
+00C2,1D,,        dec     R5      ;смещение на LSB
+00C3,ED,,        MOV     A,R5
+00C4,93,,        MOVC    A,@A+DPTR
+00C5,35 FB,,        addc    a,ccap1h        ;вычисление след интервала MCB
+00C7,F5 FB,,        mov     CCAP1H,A
+00C9,0D,,        inc     r5
+00CA,0D,,        inc     r5      ;смещение на амплитуду
+,,,
+00CB,C2 D9,,        clr     ccf1
+00CD,D2 B5,,        setb    p3.5
+00CF,32,,        reti
+00D0,,povtor,povtor:
+00D0,90 01 03,,        mov     dptr,#patt0
+00D3,7D 00,,        mov     r5,#0
+00D5,ED,,        MOV     A,R5
+00D6,93,,        movc    a,@a+dptr
+,,,
+00D7,80 AD,,        jmp     subr1
+,,,
+,,,; ---- инициализация ----
+,,,; PCA Timer/Counter
+,,,;    Clocking Source:  Fosc/12
+,,,;    Run Control:  PCA Timer is Disabled
+,,,;    Timer Count: 000H
+,,,;    PCA global interrupt:  enabled
+,,,;         NOTE:  The global disable bit is clear;
+,,,;                all interrupts are disabled.
+,,,
+00D9,,init_pca_tmr,init_pca_tmr:
+,,,
+00D9,C2 DE,,   clr CR                        ; Turn off PCA timer to load count
+00DB,75 E9 00,,   mov CL, #00H                 ; Set PCA count (low byte)
+00DE,75 F9 00,,   mov CH, #00H                 ; Set PCA count (high byte)
+,,,
+00E1,D2 AE,,   setb EC                       ; Enable PCA global interrupt
+00E3,53 D9 FE,,   anl CMOD, #0FEH               ; Disable PCA overflow interrupt
+00E6,53 D9 F9,,   anl CMOD, #0F9H               ; Set clocking input source
+00E9,43 D9 00,,   orl CMOD, #00H
+00EC,53 D9 7F,,   anl CMOD, #7FH                ; Clr counter idle control
+,,,
+00EF,D2 DE,,   setb CR                       ; Enable PCA Timer/Counter
+00F1,22,,   ret
+,,,
+,,,;  PCA module 1
+,,,;     Compare Mode:  high-speed output
+,,,;     Interrupts:  PCA compare is enabled
+,,,;           NOTE:  The PCA global interrupt is disabled
+,,,
+00F2,,init_pca_module1,init_pca_module1:
+00F2,75 DB 4D,,   mov CCAPM1, #04DH
+,,,   ;mov CCAP1L, #0E8H   ; исключить, читается из таблицы pattern
+,,,   ;mov CCAP1H, #03H    ;
+00F5,22,,   ret
+,,,
+,,,; Interrupt Control Unit
+,,,;   ****  Enabled interrupts in Interrupt Enable Register ****
+,,,;    ****  GLOBAL INTERRUPT MUST BE ENABLED FOR ANY OTHER
+,,,;    ****  INTERRUPT TO WORK!
+,,,;                  GLOBAL INTERRUPT DISABLED ALL INTERRUPTS
+,,,;                              ARE DISABLED
+,,,
+,,,
+,,,;                  PCA interrupt
+,,,;                        Priority Level = 3
+,,,
+,,,
+00F6,,init_special_interrupts,init_special_interrupts:
+,,,
+00F6,75 A8 C0,,      mov   IE, #0C0h
+00F9,75 B8 40,,      mov   IP, #040h
+,,,      ;mov   IPH, #040h
+,,,
+00FC,22,,      ret
+,,,
+,,,
+00FD,80 FE,,        jmp     $
+,,,
+,,,
+,,,
+,,,konec   equ     0ffh
+00FF,,pattern,pattern:
+00FF,0A 00,,        db      A1,plus ; амплитуда1 и фаза не вывода дельты
+0101,03 E8,,        dw      1000    ; TT01 для отладки
+0103,,patt0,patt0:
+0103,0A 00,,        db      A1,plus ; ампл 1 зап, фаза 1,
+0105,00 3C,,        dW      TT1     ; T12
+0107,0A 00,,        db      A1,plus ; амплитуда2, фаза 1,
+0109,03 AC,,        dW      TT0-TT1 ; T12
+,,,
+010B,14 00,,        db      2*A1,Plus       ; ампл 2 зап фаза 2
+010D,00 3C,,        dW      TT1     ; T23
+010F,0A 01,,        db      A1,minus        ; фаза 2
+0111,03 AC,,        dW      TT0-TT1 ; T23
+,,,
+0113,1E 01,,        db      3*A1,minus      ; ампл 3 зап фаза 3
+0115,00 3C,,        dw      TT1     ; T34
+0117,0A 01,,        db      A1,minus        ; фаза 3
+0119,03 AC,,        dw      TT0-TT1 ; T34
+,,,
+011B,28 01,,        db      4*A1,minus      ; ампл 4 зап, фаза 4
+011D,00 3C,,        dw      TT1     ; T45
+011F,0A 00,,        db      A1,plus ; фаза 4
+0121,03 AC,,        dw      TT0-TT1 ; T45
+,,,
+0123,32 00,,        db      5*A1,plus       ; ампл 5 зап. фаза 5
+0125,00 3C,,        dw      TT1     ; T56
+0127,0A 01,,        db      A1,minus        ; .фаза 5
+0129,03 AC,,        dw      TT0-TT1 ; T56
+,,,
+012B,3C 01,,        db      6*A1,Minus      ; ампл. 6 зап, фаза 6
+012D,00 3C,,        dw      TT1     ; T56
+012F,0A 00,,        db      A1,plus ;  фаза 6
+0131,03 AC,,        dw      TT0-TT1 ; T67
+,,,
+0133,46 00,,        db      7*A1,plus       ; ампл 7 зап.фаза 7
+0135,00 3C,,        dw      TT1     ; T78
+0137,0A 01,,        db      A1,minus        ;фаза 7
+0139,03 AC,,        dw      TT0-TT1 ; T78
+,,,
+013B,50 01,,        db      8*A1,minus      ;  ампл 8 зап фаза
+013D,00 3C,,        dw      TT1     ; T89
+013F,0A 00,,        db      A1,plus ; фаза
+0141,07 94,,        dw      (2*TT0)-TT1     ;  T89
+,,,
+0143,FA 00,,        db      A2,plus ; ампл. 9 зап,фаза 9
+0145,00 3C,,        dw      TT1
+0147,FA 00,,        db      A2,plus ; фаза 9
+0149,2A BC,,        dw      TZ12-TT1
+,,,
+014B,FF,,        db      konec
+,,,
+000E,,,        end
+,,,
+,,,
