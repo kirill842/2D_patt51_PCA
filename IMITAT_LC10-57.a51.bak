@@ -1,0 +1,281 @@
+;формирователь сигналов L-C, ударное возбуждение двуполярными импульсами.
+;13.01.2019 8:50
+;     Terminal
+
+;  PCA module 1
+;     Compare Mode:  high-speed output
+;		imit_LC08.a51 - текущий
+;2. из файла описания - формирование дельты через выход CEX1
+; интервал = 1000 мкс
+;==================================================
+$NOMOD51
+$INCLUDE (83C51F.MCU)	;
+; использован модуль 1
+;=================================================
+
+cs	equ	0e000h	;
+xfer	equ	0c000h	;
+CS2	EQU	0a000h	;
+XFER2	EQU	8000h	;
+;==== параметры формируемого паттерна и сигнала =====================
+;    коды дельта-импульсов
+plus	equ	0
+minus	equ	1
+null	equ	3
+;    использованы в таблице временного паттерна
+
+A1	equ	10	;ВЩ
+A2	equ	250	;ВЩ-9-й
+
+; длительность ППОП - 60 мкс
+TT0	equ	1000
+TT1	equ	60
+TZ12	equ	11000
+; амплитура первого импульса постоянна A1, а второго, задерженного на TT1 - увели-
+; чивается от A1 до 8*A1, амплитуда 9-го задерженного импульса - A2.
+; =====================================================================			
+	org 0
+	jmp	init
+	org	33h
+	jmp	subr_PCA
+	
+INIT:
+
+	call	init_pca_tmr
+	;
+	mov	090h,#0FFh
+	mov	0A0h,#0	; для управления DAC
+	;	clr	p1.4
+	clr	p3.4
+	setb	p3.5
+	;
+
+	call	init_pca_module1
+	;
+	; загрузка 1-го интервала из таблицы
+	mov	dptr,#pattern
+	; формирователь всегда 0 пропуск одного
+	mov	r5,#0	; чтение амплитуды
+	mov	a,r5
+	movc	a,@a+dptr
+	mov	p2,#(high cs)
+	movx	@R0,a	; запись MSB
+	mov	a,#0	; LSB всегда нуль
+	mov	p2,#(high xfer)	
+	movx	@r0,a	; запись LSB
+	inc	r5
+	mov	a,r5
+	movc	a,@a+dptr	; чтение фазы
+	jz	P_plus
+	; minus
+	setb	p3.4
+	jmp	next0
+P_plus:
+	clr	p3.4
+next0:
+	inc	r5
+	inc	r5	;смещение на LSB
+	mov	a,r5
+	clr	f0
+	movc	a,@a+dptr
+	mov	ccap1l,A
+	dec	R5	;смещение на LSB
+	MOV	A,R5
+	MOVC	A,@A+DPTR
+	mov	CCAP1H,A
+	inc	r5
+	inc	r5	;смещение на амплитуду
+	;
+
+	call	init_special_interrupts
+	;
+work:
+	jb	f0,next00
+	jmp	work
+next00:
+	jmp	$
+;============= ППОП =========================	
+subr_PCA:
+	clr	p3.5
+
+	mov	a,r5
+	movc	a,@a+dptr
+	cjne	a,#Konec,subr1
+	jmp	povtor
+subr1:	
+
+	inc	r5
+	mov	a,r5
+	movc	a,@a+dptr	; чтение фазы
+	dec	r5	;возврат на аплитуду
+	jz	P1_plus
+	; minus
+	mov	a,r5
+	movc	a,@a+dptr
+	mov	p2,#(high cs2)
+	movx	@R0,a	; запись MSB
+	mov	a,#0	; LSB всегда нуль
+	mov	p2,#(high xfer2)	
+	movx	@r0,a	; запись LSB
+	; plus = 0
+	mov	p2,#(high cs)	
+	movx	@r0,a	; запись LSB		
+	mov	p2,#(high xfer)	
+	movx	@r0,a	; запись LSB
+		jmp	next10
+P1_plus:
+	mov	a,r5
+	movc	a,@a+dptr
+	mov	p2,#(high cs)
+	movx	@R0,a	; запись MSB
+	mov	a,#0	; LSB всегда нуль
+	mov	p2,#(high xfer)	
+	movx	@r0,a	; запись LSB
+	; minus = 0
+	mov	p2,#(high cs2)
+	movx	@R0,a	; запись MSB
+	mov	p2,#(high xfer2)	
+	movx	@r0,a	; запись LSB		
+next10:
+	inc	r5
+	inc	r5
+	inc	r5	;смещение на LSB
+	mov	a,r5
+	clr	f0
+	movc	a,@a+dptr
+	add	a,ccap1L	;вычисление след интервала LSB
+	mov	ccap1l,A
+	dec	R5	;смещение на LSB
+	MOV	A,R5
+	MOVC	A,@A+DPTR
+	addc	a,ccap1h	;вычисление след интервала MCB
+	mov	CCAP1H,A
+	inc	r5
+	inc	r5	;смещение на амплитуду	
+
+	clr	ccf1
+	setb	p3.5
+	reti
+povtor:
+	mov	dptr,#patt0
+	mov	r5,#0
+	MOV	A,R5	
+	movc	a,@a+dptr
+
+	jmp	subr1	
+	
+; ---- инициализация ----
+; PCA Timer/Counter
+;    Clocking Source:  Fosc/12
+;    Run Control:  PCA Timer is Disabled
+;    Timer Count: 000H
+;    PCA global interrupt:  enabled
+;         NOTE:  The global disable bit is clear;
+;                all interrupts are disabled.
+
+init_pca_tmr:
+
+   clr CR                        ; Turn off PCA timer to load count
+   mov CL, #00H                 ; Set PCA count (low byte)
+   mov CH, #00H                 ; Set PCA count (high byte)
+
+   setb EC                       ; Enable PCA global interrupt
+   anl CMOD, #0FEH               ; Disable PCA overflow interrupt
+   anl CMOD, #0F9H               ; Set clocking input source
+   orl CMOD, #00H
+   anl CMOD, #7FH                ; Clr counter idle control
+
+   setb CR                       ; Enable PCA Timer/Counter
+   ret
+
+;  PCA module 1
+;     Compare Mode:  high-speed output
+;     Interrupts:  PCA compare is enabled
+;           NOTE:  The PCA global interrupt is disabled
+
+init_pca_module1:
+   mov CCAPM1, #04DH
+   ;mov CCAP1L, #0E8H	; исключить, читается из таблицы pattern
+   ;mov CCAP1H, #03H	;
+   ret
+
+; Interrupt Control Unit
+;   ****  Enabled interrupts in Interrupt Enable Register ****
+;    ****  GLOBAL INTERRUPT MUST BE ENABLED FOR ANY OTHER
+;    ****  INTERRUPT TO WORK!                                
+;                  GLOBAL INTERRUPT DISABLED ALL INTERRUPTS
+;                              ARE DISABLED
+
+
+;                  PCA interrupt
+;                        Priority Level = 3
+
+
+init_special_interrupts:
+
+      mov   IE, #0C0h
+      mov   IP, #040h
+      ;mov   IPH, #040h
+
+      ret
+
+
+	jmp	$
+	
+
+
+konec	equ	0ffh
+pattern:
+	db	A1,plus	; амплитуда1 и фаза не вывода дельты
+	dw	1000	; TT01 для отладки
+patt0:	
+	db	A1,plus	; ампл 1 зап, фаза 1, 	
+	dW	TT1	; T12
+	db	A1,plus	; амплитуда2, фаза 1, 	
+	dW	TT0-TT1	; T12	
+	
+	db	2*A1,Plus	; ампл 2 зап фаза 2
+	dW	TT1	; T23 
+	db	A1,minus	; фаза 2
+	dW	TT0-TT1	; T23 
+		
+	db	3*A1,minus	; ампл 3 зап фаза 3
+	dw	TT1	; T34
+	db	A1,minus	; фаза 3
+	dw	TT0-TT1	; T34
+		
+	db	4*A1,minus	; ампл 4 зап, фаза 4	
+	dw	TT1	; T45
+	db	A1,plus	; фаза 4	
+	dw	TT0-TT1	; T45
+	
+	db	5*A1,plus	; ампл 5 зап. фаза 5
+	dw	TT1	; T56
+	db	A1,minus	; .фаза 5
+	dw	TT0-TT1	; T56	
+	
+	db	6*A1,Minus	; ампл. 6 зап, фаза 6
+	dw	TT1	; T56
+	db	A1,plus	;  фаза 6				
+	dw	TT0-TT1	; T67
+	
+	db	7*A1,plus	; ампл 7 зап.фаза 7				
+	dw	TT1	; T78
+	db	A1,minus	;фаза 7				
+	dw	TT0-TT1	; T78	
+		
+	db	8*A1,minus	;  ампл 8 зап фаза 			
+	dw	TT1	; T89
+	db	A1,plus	; фаза 			
+	dw	(2*TT0)-TT1	;  T89	
+	
+	db	A2,plus	; ампл. 9 зап,фаза 9			
+	dw	TT1
+	db	A2,plus	; фаза 9			
+	dw	TZ12-TT1	
+	
+	db	konec	
+	
+	end
+	
+	
